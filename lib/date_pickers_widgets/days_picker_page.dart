@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart' as dp;
+import 'package:intl/intl.dart';
 
 import '../color_picker_dialog.dart';
 import '../color_selector_btn.dart';
 import '../event.dart';
+
 
 /// Page with [dp.DayPicker] where many single days can be selected.
 class DaysPickerPage extends StatefulWidget {
@@ -19,41 +21,35 @@ class DaysPickerPage extends StatefulWidget {
 
 class _DaysPickerPageState extends State<DaysPickerPage> {
   List<DateTime> _selectedDates = [];
-  final DateTime _firstDate = DateTime.now().subtract(Duration(days: 45));
-  final DateTime _lastDate = DateTime.now().add(Duration(days: 45));
+  final DateTime _firstDate = DateTime.now();
+  final DateTime _lastDate = DateTime.now().add(Duration(days: 10));
+  double _value = 0.0;
+  DateTime now = DateTime.now();
+  DateTime? returnTime;
+  Color selectedDateStyleColor = Colors.white;
+  Color selectedSingleDateDecorationColor = Colors.deepOrangeAccent;
 
-  Color selectedDateStyleColor = Colors.blue;
-  Color selectedSingleDateDecorationColor = Colors.red;
 
   @override
   void initState() {
     super.initState();
-
-    final now = DateTime.now();
-
     _selectedDates = [
-      now,
-      now.subtract(Duration(days: 10)),
-      now.add(Duration(days: 7))
+      now
     ];
   }
+  List<DateTime> events = [
+  DateTime.now().add(Duration(days: 2)),
+  DateTime.now().add(Duration(days: 4)),
+  DateTime.now().add(Duration(days: 6)),
+  ];
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    selectedDateStyleColor = Theme.of(context).colorScheme.onSecondary;
-    selectedSingleDateDecorationColor = Theme.of(context).colorScheme.secondary;
-  }
 
   @override
   Widget build(BuildContext context) {
-    // add selected colors to default settings
     dp.DatePickerRangeStyles styles = dp.DatePickerRangeStyles(
-        selectedDateStyle: Theme.of(context)
-            .textTheme
-            .bodyText1
-            ?.copyWith(color: selectedDateStyleColor),
+        selectedDateStyle: TextStyle(
+            color: selectedDateStyleColor,
+        ) ,
         selectedSingleDateDecoration: BoxDecoration(
             color: selectedSingleDateDecorationColor, shape: BoxShape.circle));
 
@@ -84,34 +80,27 @@ class _DaysPickerPageState extends State<DaysPickerPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  "Selected date styles",
-                  style: Theme.of(context).textTheme.subtitle1,
+                Slider(
+                  value: _value,
+                  min: 0,
+                  max: 6,
+                  divisions: 6,
+                  onChanged: (val){
+                  var  _returnTime = now.add(Duration(hours: val.toInt()));
+                  returnTime = _returnTime;
+                    print(returnTime);
+                    if(returnTime!.isAfter(DateTime.now())){
+                      _selectedDates.clear();
+                      _selectedDates.add(_returnTime);
+                    }
+                    setState(() {
+                      _value = val;
+                    });
+
+                  },
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ColorSelectorBtn(
-                        title: "Text",
-                        color: selectedDateStyleColor,
-                        showDialogFunction: _showSelectedDateDialog,
-                        colorBtnSize: 42.0,
-                      ),
-                      SizedBox(
-                        width: 12.0,
-                      ),
-                      ColorSelectorBtn(
-                        title: "Background",
-                        color: selectedSingleDateDecorationColor,
-                        showDialogFunction: _showSelectedBackgroundColorDialog,
-                        colorBtnSize: 42.0,
-                      ),
-                    ],
-                  ),
-                ),
-                Text("Selected: $_selectedDates")
+
+                Text("Selected: ${DateFormat('hh  a').format(returnTime??DateTime.now())}")
               ],
             ),
           ),
@@ -136,19 +125,7 @@ class _DaysPickerPageState extends State<DaysPickerPage> {
   }
 
   // select background color of the selected date
-  void _showSelectedBackgroundColorDialog() async {
-    Color? newSelectedColor = await showDialog(
-        context: context,
-        builder: (_) => ColorPickerDialog(
-              selectedColor: selectedSingleDateDecorationColor,
-            ));
 
-    if (newSelectedColor != null) {
-      setState(() {
-        selectedSingleDateDecorationColor = newSelectedColor;
-      });
-    }
-  }
 
   void _onSelectedDateChanged(List<DateTime> newDates) {
     setState(() {
@@ -158,21 +135,16 @@ class _DaysPickerPageState extends State<DaysPickerPage> {
 
   // ignore: prefer_expression_function_bodies
   bool _isSelectableCustom(DateTime day) {
-    return day.weekday < 6;
+    return ! events.any((element) => element.day==day.day);
   }
 
   dp.EventDecoration? _eventDecorationBuilder(DateTime date) {
-    List<DateTime> eventsDates =
-        widget.events.map<DateTime>((e) => e.date).toList();
-
-    bool isEventDate = eventsDates.any((d) =>
-        date.year == d.year && date.month == d.month && d.day == date.day);
+    bool isEventDate = events.any((element) => element.day == date.day);
 
     BoxDecoration roundedBorder = BoxDecoration(
-        border: Border.all(
-          color: Colors.deepOrange,
-        ),
-        borderRadius: BorderRadius.all(Radius.circular(3.0)));
+        shape: BoxShape.circle,
+        color: Colors.grey
+    );
 
     return isEventDate
         ? dp.EventDecoration(boxDecoration: roundedBorder)
